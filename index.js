@@ -1,8 +1,6 @@
 const express = require('express');
 const app = express();
 
-app.use(express.json());
-
 let notes = [
     {
         id: 1,
@@ -19,7 +17,23 @@ let notes = [
         content: "GET and POST are the most important methods of HTML protocol",
         important: true
     }
-]
+];
+
+const requestLogger = (req, res, next) => {
+    console.log('Method:', req.method);
+    console.log('Path:', req.path);
+    console.log('Body:', req.body);
+    console.log('---');
+    next();
+}
+
+const unknownEndpoint = (req, res, next) => {
+    res.status(404).send({error: 'unknown endpoint '});
+    next();
+}
+
+app.use(express.json());
+app.use(requestLogger);
 
 const generateId = () => {
     const maxId = notes.length > 0
@@ -77,7 +91,10 @@ app.delete('/api/notes/:id', (req, res) => {
         res.status(404).send(`A note with the id ${id} dont exist or was already deleted`);
     }
     res.status(204).end();
-})
+});
+
+
+app.use(unknownEndpoint);
 
 
 const port = process.env.PORT || 3001;
