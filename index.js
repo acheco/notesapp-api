@@ -1,24 +1,8 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const Note = require("./models/note");
 const app = express();
-
-let notes = [
-    {
-        id: 1,
-        content: "HTML is easy",
-        important: true
-    },
-    {
-        id: 2,
-        content: "Browser can execute only JavaScript",
-        important: false
-    },
-    {
-        id: 3,
-        content: "GET and POST are the most important methods of HTML protocol",
-        important: true
-    }
-];
 
 const requestLogger = (req, res, next) => {
     console.log('Method:', req.method);
@@ -39,12 +23,12 @@ app.use(requestLogger);
 app.use(cors());
 
 
-const generateId = () => {
-    const maxId = notes.length > 0
-        ? Math.max(...notes.map((note) => note.id))
-        : 0
-    return maxId + 1;
-}
+// const generateId = () => {
+//     const maxId = notes.length > 0
+//         ? Math.max(...notes.map((note) => note.id))
+//         : 0
+//     return maxId + 1;
+// }
 
 app.get('/', (req, res) => {
     res.send('<h1>Hello World!</h1>');
@@ -52,39 +36,42 @@ app.get('/', (req, res) => {
 
 // GET all notes
 app.get('/api/notes', (req, res) => {
-    res.json(notes)
+    Note.find({}).then((result) => {
+        res.send(result);
+    })
 });
 
 //  GET a single note
 app.get('/api/notes/:id', (req, res) => {
-    const id = Number(req.params.id);
-    const note = notes.find(note => note.id === id);
 
-    if (!note) {
-        res.status(404).send(`A note with the id ${id} does not exist`);
-    }
-    res.json(note);
+    Note.findById(req.params.id).then(note => {
+        res.json(note);
+    })
+        .catch((err) => {
+            console.log('Error', err);
+        })
+
 });
 
 //  POSTING a note
 app.post('/api/notes', (req, res) => {
     const body = req.body;
 
-    if (!body.content) {
+    if (body.content === undefined || body.content === '') {
         return res.status(400).json({
-            error: 'No content provided'
-        })
+            error: 'Content missing',
+        });
     }
 
-    const note = {
-        id: generateId(),
+    const note = new Note({
         content: body.content,
         important: Boolean(body.important) || false,
-    }
+    })
 
-    notes = notes.concat(note);
+    note.save().then(savedNote => {
+        res.json(savedNote);
+    });
 
-    res.json(body);
 })
 
 //  DELETE a note
@@ -97,12 +84,9 @@ app.delete('/api/notes/:id', (req, res) => {
     res.status(204).end();
 });
 
-
 app.use(unknownEndpoint);
 
-
-const port = process.env.PORT || 3001;
-
+const port = process.env.PORT;
 app.listen(port, () => {
     console.log(`Listening on port ${port}`);
 })
