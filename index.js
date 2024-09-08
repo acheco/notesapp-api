@@ -12,23 +12,10 @@ const requestLogger = (req, res, next) => {
     next();
 }
 
-const unknownEndpoint = (req, res, next) => {
-    res.status(404).send({error: 'unknown endpoint '});
-    next();
-}
-
 app.use(express.json());
 app.use(express.static('dist'));
 app.use(requestLogger);
 app.use(cors());
-
-
-// const generateId = () => {
-//     const maxId = notes.length > 0
-//         ? Math.max(...notes.map((note) => note.id))
-//         : 0
-//     return maxId + 1;
-// }
 
 app.get('/', (req, res) => {
     res.send('<h1>Hello World!</h1>');
@@ -42,15 +29,17 @@ app.get('/api/notes', (req, res) => {
 });
 
 //  GET a single note
-app.get('/api/notes/:id', (req, res) => {
+app.get('/api/notes/:id', (req, res, next) => {
 
-    Note.findById(req.params.id).then(note => {
-        res.json(note);
-    })
-        .catch((err) => {
-            console.log('Error', err);
+    Note.findById(req.params.id)
+        .then(note => {
+            if (note) {
+                res.send(note);
+            } else {
+                res.status(404).send({error: 'Not Found'});
+            }
         })
-
+        .catch(err => next(err))
 });
 
 //  POSTING a note
@@ -75,16 +64,54 @@ app.post('/api/notes', (req, res) => {
 })
 
 //  DELETE a note
-app.delete('/api/notes/:id', (req, res) => {
-    const id = Number(req.params.id);
-    const note = notes.find(note => note.id === id);
-    if (!note) {
-        res.status(404).send(`A note with the id ${id} dont exist or was already deleted`);
-    }
-    res.status(204).end();
+app.delete('/api/notes/:id', (req, res, next) => {
+
+    Note.findByIdAndDelete(req.params.id)
+        .then(result => {
+            res.status(204).end();
+        })
+        .catch(err => next(err))
+
 });
 
+app.put('/api/notes/:id', (req, res, next) => {
+
+    const body = req.body;
+
+    const note = {
+        content: body.content,
+        important: body.important,
+    }
+
+    Note.findByIdAndUpdate(req.params.id, note, {new: true})
+        .then(updatedNote => {
+            res.json(updatedNote);
+        })
+        .catch(err => next(err))
+})
+
+// middleware para manejo de solicitudes con endpoint desconocidos
+const unknownEndpoint = (req, res, next) => {
+    res.status(404).send({error: 'unknown endpoint '});
+    next();
+}
+
 app.use(unknownEndpoint);
+
+// El middleware de manejo de errores debe ser el último en cargarse, de lo contrario,
+// tendremos problemas al momento de utilizarlo
+
+const errorHandler = (err, req, res, next) => {
+    console.error(err.message);
+
+    if (err.name === 'CastError') {
+        return res.status(400).send({error: 'Invalid ID format'});
+    }
+
+    next(err);
+}
+
+app.use(errorHandler);
 
 const port = process.env.PORT;
 app.listen(port, () => {
