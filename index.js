@@ -43,10 +43,10 @@ app.get('/api/notes/:id', (req, res, next) => {
 });
 
 //  POSTING a note
-app.post('/api/notes', (req, res) => {
+app.post('/api/notes', (req, res, next) => {
     const body = req.body;
 
-    if (body.content === undefined || body.content === '') {
+    if (body.content === undefined) {
         return res.status(400).json({
             error: 'Content missing',
         });
@@ -57,9 +57,12 @@ app.post('/api/notes', (req, res) => {
         important: Boolean(body.important) || false,
     })
 
-    note.save().then(savedNote => {
-        res.json(savedNote);
-    });
+    note.save()
+        .then(savedNote => {
+            res.json(savedNote);
+        })
+        .catch(err => next(err))
+
 
 })
 
@@ -76,14 +79,13 @@ app.delete('/api/notes/:id', (req, res, next) => {
 
 app.put('/api/notes/:id', (req, res, next) => {
 
-    const body = req.body;
+    const {content, important} = req.body;
 
-    const note = {
-        content: body.content,
-        important: body.important,
-    }
-
-    Note.findByIdAndUpdate(req.params.id, note, {new: true})
+    Note.findByIdAndUpdate(
+        req.params.id,
+        {content, important},
+        {new: true, runValidators: true, context: 'query'}
+    )
         .then(updatedNote => {
             res.json(updatedNote);
         })
@@ -106,6 +108,10 @@ const errorHandler = (err, req, res, next) => {
 
     if (err.name === 'CastError') {
         return res.status(400).send({error: 'Invalid ID format'});
+    }
+
+    if (err.name === 'ValidationError') {
+        return res.status(400).send({error: err.message});
     }
 
     next(err);
