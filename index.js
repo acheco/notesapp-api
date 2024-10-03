@@ -1,7 +1,6 @@
-const express = require('express');
 const config = require('./utils/config');
 const logger = require('./utils/logger');
-const app = express();
+const app = require('./app');
 
 
 const port = process.env.PORT;

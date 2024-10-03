@@ -29,7 +29,7 @@ notesRouter.get('/:id', (req, res, next) => {
 });
 
 //  POSTING a note
-notesRouter.post('/api/notes', (req, res, next) => {
+notesRouter.post('/', (req, res, next) => {
     const body = req.body;
 
     if (body.content === undefined) {
@@ -51,7 +51,7 @@ notesRouter.post('/api/notes', (req, res, next) => {
 })
 
 //  DELETE a note
-notesRouter.delete('/api/notes/:id', (req, res, next) => {
+notesRouter.delete('/:id', (req, res, next) => {
 
     Note.findByIdAndDelete(req.params.id)
         .then(result => {
@@ -61,7 +61,8 @@ notesRouter.delete('/api/notes/:id', (req, res, next) => {
 
 });
 
-notesRouter.put('/api/notes/:id', (req, res, next) => {
+// Updating a note
+notesRouter.put('/:id', (req, res, next) => {
 
     const {content, important} = req.body;
 
